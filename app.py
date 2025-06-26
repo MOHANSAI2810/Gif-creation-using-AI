@@ -4,9 +4,8 @@ from flask_cors import CORS
 import whisper
 from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip
 import moviepy.config as mpconf
+mpconf.change_settings({"IMAGEMAGICK_BINARY": "C:\\Program Files\\ImageMagick-7.1.1-Q16-HDRI\\magick.exe"})
 
-# 🔧 Configure ImageMagick for MoviePy (use 'magick' for v7+)
-mpconf.change_settings({"IMAGEMAGICK_BINARY": "magick"})
 
 app = Flask(__name__)
 CORS(app)
