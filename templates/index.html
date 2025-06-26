@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Video to GIF Generator</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>AI-Powered Video to GIF Generator</h1>
+    <form id="uploadForm">
+      <input type="text" name="prompt" placeholder="Enter GIF prompt" required><br>
+      <input type="file" name="video" accept="video/mp4" required><br>
+      <button type="submit">Generate GIF</button>
+    </form>
+    <div id="result"></div>
+  </div>
+  <script src="/static/script.js"></script>
+</body>
+</html>
