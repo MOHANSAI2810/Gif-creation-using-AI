@@ -1,108 +1,108 @@
 import os
-from flask import Flask, request, render_template, jsonify, send_from_directory
-from flask_cors import CORS
+import yt_dlp
 import whisper
+from flask import Flask, request, jsonify, send_from_directory
+from flask import render_template
 from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip
-import moviepy.config as mpconf
-mpconf.change_settings({"IMAGEMAGICK_BINARY": "C:\\Program Files\\ImageMagick-7.1.1-Q16-HDRI\\magick.exe"})
-
+import tempfile
+import threading
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-CORS(app)
-
-# Create folders
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['OUTPUT_FOLDER'] = 'output'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['OUTPUT_FOLDER'], exist_ok=True)
-
-# FFmpeg path (Windows users)
-os.environ["PATH"] += os.pathsep + r"C:\ffmpeg\bin"  # Update this if needed
-
 @app.route('/')
 def index():
     return render_template('index.html')
+# Progress tracking
+progress = {}
 
-@app.route('/generate-gif', methods=['POST'])
-def generate_gif():
-    prompt = request.form.get("prompt", "").strip().lower()
-    video_file = request.files.get("video")
-
-    if not video_file or not prompt:
-        return jsonify({"error": "Please provide a prompt and video file."}), 400
-
-    # Save the video file
-    video_path = os.path.join(app.config['UPLOAD_FOLDER'], video_file.filename)
-    video_file.save(video_path)
-
-    # Check for audio stream
-    clip = VideoFileClip(video_path)
-    if clip.audio is None:
-        return jsonify({"error": "This video has no audio. Please upload a video with speech."}), 400
-
-    # Transcribe using Whisper
-    model = whisper.load_model("base")
-    result = model.transcribe(video_path)
-    segments = result["segments"]
-
-    print("\n🔍 Transcript Preview:\n", result["text"][:300])
-    print("\n🧩 Segment Preview:")
-    for s in segments[:5]:
-        print(f"[{s['start']:.2f}s - {s['end']:.2f}s]: {s['text']}")
-
-    # Define keywords per prompt
-    prompt_keywords = {
-        "sadness": ["sad", "cry", "tears", "hurt", "lonely", "pain"],
-        "funny": ["laugh", "funny", "joke", "hilarious", "comedy"],
-        "motivational": ["believe", "win", "success", "never give up", "strong"]
+def download_youtube_audio(url):
+    """Download only audio from YouTube (faster than video)"""
+    ydl_opts = {
+        'format': 'bestaudio/best',
+        'outtmpl': os.path.join(app.config['UPLOAD_FOLDER'], 'yt_%(id)s.%(ext)s'),
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
+        }],
+        'quiet': True
     }
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=True)
+        return ydl.prepare_filename(info).replace('.webm', '.mp3').replace('.m4a', '.mp3')
 
-    # Match segments
-    matching_segments = []
-    for segment in segments:
-        text = segment['text'].lower()
-        for keyword in prompt_keywords.get(prompt, []):
-            if keyword in text:
-                matching_segments.append(segment)
-                break
-        if len(matching_segments) >= 3:
-            break
+def process_video_to_gifs(video_path, prompt, job_id):
+    try:
+        progress[job_id] = {'stage': 'transcribing', 'progress': 0}
+        
+        # Transcribe with Whisper (faster with small models)
+        model = whisper.load_model("tiny")
+        result = model.transcribe(video_path)
+        segments = result["segments"]
+        
+        progress[job_id] = {'stage': 'creating_gifs', 'progress': 50}
+        
+        # Create max 3 GIFs
+        gif_paths = []
+        for i, seg in enumerate(segments[:3]):
+            clip = VideoFileClip(video_path).subclip(seg['start'], seg['end'])
+            text_clip = TextClip(
+                seg['text'], fontsize=24, color='white',
+                size=(clip.w*0.9, None), method='caption'
+            ).set_position(('center', 'bottom')).set_duration(clip.duration)
+            
+            final = CompositeVideoClip([clip, text_clip])
+            gif_path = os.path.join(app.config['OUTPUT_FOLDER'], f"{job_id}_{i}.gif")
+            final.write_gif(gif_path, fps=8)
+            gif_paths.append(gif_path)
+            
+            progress[job_id]['progress'] = 50 + ((i+1)*50/3)
+        
+        progress[job_id] = {'stage': 'complete', 'progress': 100, 'gifs': gif_paths}
+        
+    except Exception as e:
+        progress[job_id] = {'error': str(e)}
+    finally:
+        # Cleanup
+        if os.path.exists(video_path):
+            os.remove(video_path)
 
-    # Fallback: match prompt words
-    if not matching_segments:
-        prompt_words = prompt.split()
-        for segment in segments:
-            if any(word in segment['text'].lower() for word in prompt_words):
-                matching_segments.append(segment)
-            if len(matching_segments) >= 3:
-                break
+@app.route('/generate', methods=['POST'])
+def generate():
+    job_id = tempfile.mkstemp()[1][-10:]  # Simple unique ID
+    
+    if 'youtube_url' in request.form:
+        # Start YouTube processing in background
+        threading.Thread(
+            target=process_video_to_gifs,
+            args=(download_youtube_audio(request.form['youtube_url']), 
+                 request.form['prompt'],
+                 job_id)
+        ).start()
+    else:
+        # Handle direct upload
+        file = request.files['video']
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        
+        threading.Thread(
+            target=process_video_to_gifs,
+            args=(filepath, request.form['prompt'], job_id)
+        ).start()
+    
+    return jsonify({'job_id': job_id})
 
-    # Fallback: use first 3 segments
-    if not matching_segments:
-        matching_segments = segments[:3]
+@app.route('/progress/<job_id>')
+def get_progress(job_id):
+    return jsonify(progress.get(job_id, {'error': 'Job not found'}))
 
-    # Generate GIFs with captions
-    gif_paths = []
-    for i, seg in enumerate(matching_segments):
-        start, end = seg['start'], seg['end']
-        caption = seg['text']
-
-        clip = VideoFileClip(video_path).subclip(start, end)
-        text_clip = TextClip(caption, fontsize=24, color='white', bg_color='black', size=clip.size)
-        text_clip = text_clip.set_duration(clip.duration).set_position(('center', 'bottom'))
-
-        final = CompositeVideoClip([clip, text_clip])
-        gif_filename = f"gif_{i+1}.gif"
-        gif_path = os.path.join(app.config['OUTPUT_FOLDER'], gif_filename)
-        final.write_gif(gif_path)
-
-        gif_paths.append(f"/output/{gif_filename}")
-
-    return jsonify({"message": "GIFs generated successfully!", "gifs": gif_paths})
-
-@app.route('/output/<filename>')
-def serve_output_file(filename):
+@app.route('/gif/<path:filename>')
+def serve_gif(filename):
     return send_from_directory(app.config['OUTPUT_FOLDER'], filename)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(threaded=True)

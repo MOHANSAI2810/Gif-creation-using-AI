@@ -1,20 +1,75 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Video to GIF Generator</title>
-  <link rel="stylesheet" href="/static/style.css">
+    <title>Video to GIF</title>
+    <style>
+        #progress-container { display: none; }
+        .gif-preview { max-width: 300px; margin: 10px; }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <h1>AI-Powered Video to GIF Generator</h1>
     <form id="uploadForm">
-      <input type="text" name="prompt" placeholder="Enter GIF prompt" required><br>
-      <input type="file" name="video" accept="video/mp4" required><br>
-      <button type="submit">Generate GIF</button>
+        <input type="text" name="prompt" placeholder="Enter theme" required>
+        <input type="text" name="youtube_url" placeholder="OR YouTube URL">
+        <input type="file" name="video" accept="video/*">
+        <button type="submit">Generate GIFs</button>
     </form>
-    <div id="result"></div>
-  </div>
-  <script src="/static/script.js"></script>
+    
+    <div id="progress-container">
+        <p>Status: <span id="status">Starting...</span></p>
+        <progress id="progress-bar" value="0" max="100"></progress>
+    </div>
+    
+    <div id="results"></div>
+
+    <script>
+        const form = document.getElementById('uploadForm');
+        const progressContainer = document.getElementById('progress-container');
+        const progressBar = document.getElementById('progress-bar');
+        const statusText = document.getElementById('status');
+        const resultsDiv = document.getElementById('results');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            resultsDiv.innerHTML = '';
+            progressContainer.style.display = 'block';
+            
+            const formData = new FormData(form);
+            const response = await fetch('/generate', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const { job_id } = await response.json();
+            checkProgress(job_id);
+        });
+
+        async function checkProgress(job_id) {
+            const response = await fetch(`/progress/${job_id}`);
+            const data = await response.json();
+            
+            if (data.error) {
+                statusText.textContent = `Error: ${data.error}`;
+                return;
+            }
+            
+            progressBar.value = data.progress || 0;
+            statusText.textContent = data.stage || 'Processing...';
+            
+            if (data.gifs) {
+                data.gifs.forEach(gif => {
+                    const gifName = gif.split('/').pop();
+                    resultsDiv.innerHTML += `
+                        <img src="/gif/${gifName}" class="gif-preview">
+                        <a href="/gif/${gifName}" download>Download</a>
+                    `;
+                });
+                progressContainer.style.display = 'none';
+                return;
+            }
+            
+            setTimeout(() => checkProgress(job_id), 1000);
+        }
+    </script>
 </body>
 </html>
