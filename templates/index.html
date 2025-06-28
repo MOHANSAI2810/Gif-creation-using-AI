@@ -1,74 +1,702 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Video to GIF</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Powered Video to GIF Generator</title>
     <style>
-        #progress-container { display: none; }
-        .gif-preview { max-width: 300px; margin: 10px; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            padding: 40px;
+        }
+
+        .upload-section {
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1rem;
+        }
+
+        input[type="text"], input[type="url"], input[type="file"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus, input[type="url"]:focus, input[type="file"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            opacity: 0;
+            position: absolute;
+            z-index: -1;
+        }
+
+        .file-input-label {
+            display: block;
+            padding: 15px;
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .file-input-label:hover {
+            background: #e9ecef;
+            border-color: #667eea;
+        }
+
+        .file-input-label.has-file {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+
+        .file-input-label.disabled {
+            background: #f5f5f5;
+            border-color: #d6d6d6;
+            color: #999;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .generate-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 18px 40px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .generate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .generate-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .progress-section {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .progress-bar {
+            background: #e9ecef;
+            border-radius: 10px;
+            height: 20px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            text-align: center;
+            margin: 10px 0;
+            font-weight: 600;
+        }
+
+        .results-section {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .gif-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .gif-item {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .gif-item:hover {
+            transform: translateY(-5px);
+        }
+
+        .gif-item img {
+            max-width: 100%;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .gif-info {
+            margin-bottom: 15px;
+        }
+
+        .gif-text {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 8px;
+            font-style: italic;
+            margin-bottom: 10px;
+        }
+
+        .download-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .download-btn:hover {
+            background: #218838;
+            transform: translateY(-1px);
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border: 1px solid #f5c6cb;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border: 1px solid #c3e6cb;
+        }
+
+        .example-prompts {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+
+        .example-prompts h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .example-prompts .prompt-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .prompt-tag {
+            background: #667eea;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .prompt-tag:hover {
+            background: #764ba2;
+            transform: translateY(-1px);
+        }
+
+        .input-separator {
+            text-align: center;
+            margin: 20px 0;
+            position: relative;
+        }
+
+        .input-separator::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #dee2e6;
+        }
+
+        .input-separator span {
+            background: white;
+            padding: 0 20px;
+            color: #666;
+            font-weight: 600;
+        }
+
+        .input-hint {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 5px;
+            display: block;
+        }
+
+        .input-disabled {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 0;
+                border-radius: 0;
+            }
+            
+            .header {
+                padding: 30px 20px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .main-content {
+                padding: 30px 20px;
+            }
+        }
     </style>
 </head>
 <body>
-    <form id="uploadForm">
-        <input type="text" name="prompt" placeholder="Enter theme" required>
-        <input type="text" name="youtube_url" placeholder="OR YouTube URL">
-        <input type="file" name="video" accept="video/*">
-        <button type="submit">Generate GIFs</button>
-    </form>
-    
-    <div id="progress-container">
-        <p>Status: <span id="status">Starting...</span></p>
-        <progress id="progress-bar" value="0" max="100"></progress>
+    <div class="container">
+        <div class="header">
+            <h1>🎬 AI Video to GIF Generator</h1>
+            <p>Transform your videos into captioned GIFs with AI-powered content analysis</p>
+        </div>
+
+        <div class="main-content">
+            <form id="uploadForm" enctype="multipart/form-data">
+                <div class="upload-section">
+                    <div class="form-group">
+                        <label for="prompt">Theme/Prompt</label>
+                        <input type="text" id="prompt" name="prompt" placeholder="e.g., funny moments, emotional quotes, action scenes" required>
+                        
+                        <div class="example-prompts">
+                            <h3>💡 Example Prompts:</h3>
+                            <div class="prompt-tags">
+                                <span class="prompt-tag" onclick="setPrompt('funny moments')">funny moments</span>
+                                <span class="prompt-tag" onclick="setPrompt('emotional quotes')">emotional quotes</span>
+                                <span class="prompt-tag" onclick="setPrompt('action scenes')">action scenes</span>
+                                <span class="prompt-tag" onclick="setPrompt('motivational clips')">motivational clips</span>
+                                <span class="prompt-tag" onclick="setPrompt('dramatic dialogue')">dramatic dialogue</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="youtube_url">YouTube URL</label>
+                        <input type="url" id="youtube_url" name="youtube_url" placeholder="https://www.youtube.com/watch?v=... or https://youtu.be/...">
+                        <small class="input-hint">
+                            📺 Paste a YouTube link for quick processing
+                        </small>
+                    </div>
+
+                    <div class="input-separator">
+                        <span>OR</span>
+                    </div>
+
+                    <div class="form-group" id="fileUploadGroup">
+                        <label for="video">Upload Video File</label>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="video" name="video" accept="video/*">
+                            <label for="video" class="file-input-label" id="fileLabel">
+                                📁 Choose video file or drag & drop here
+                            </label>
+                        </div>
+                        <small class="input-hint">
+                            💾 Supported: MP4, AVI, MOV, MKV, WEBM (Max 10 minutes)
+                        </small>
+                    </div>
+
+                    <button type="submit" class="generate-btn" id="generateBtn">
+                        🚀 Generate GIFs
+                    </button>
+                </div>
+            </form>
+
+            <div class="progress-section" id="progressSection">
+                <div class="progress-text" id="progressText">Processing...</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div id="statusText"></div>
+            </div>
+
+            <div class="results-section" id="resultsSection">
+                <h2>✨ Generated GIFs</h2>
+                <div class="gif-grid" id="gifGrid"></div>
+            </div>
+
+            <div id="messageArea"></div>
+        </div>
     </div>
-    
-    <div id="results"></div>
 
     <script>
-        const form = document.getElementById('uploadForm');
-        const progressContainer = document.getElementById('progress-container');
-        const progressBar = document.getElementById('progress-bar');
-        const statusText = document.getElementById('status');
-        const resultsDiv = document.getElementById('results');
+        let currentJobId = null;
+        let pollInterval = null;
 
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            resultsDiv.innerHTML = '';
-            progressContainer.style.display = 'block';
+        // UI state management
+        const youtubeInput = document.getElementById('youtube_url');
+        const fileInput = document.getElementById('video');
+        const fileLabel = document.getElementById('fileLabel');
+        const fileUploadGroup = document.getElementById('fileUploadGroup');
+
+        // Handle YouTube URL input
+        youtubeInput.addEventListener('input', function() {
+            const hasYouTubeUrl = this.value.trim().length > 0;
             
-            const formData = new FormData(form);
-            const response = await fetch('/generate', {
-                method: 'POST',
-                body: formData
-            });
-            
-            const { job_id } = await response.json();
-            checkProgress(job_id);
+            if (hasYouTubeUrl) {
+                // Disable file upload when YouTube URL is entered
+                fileUploadGroup.classList.add('input-disabled');
+                fileInput.disabled = true;
+                fileLabel.classList.add('disabled');
+                // Clear file input
+                fileInput.value = '';
+                fileLabel.textContent = '📁 Choose video file or drag & drop here';
+                fileLabel.classList.remove('has-file');
+            } else {
+                // Enable file upload when YouTube URL is cleared
+                fileUploadGroup.classList.remove('input-disabled');
+                fileInput.disabled = false;
+                fileLabel.classList.remove('disabled');
+            }
         });
 
-        async function checkProgress(job_id) {
-            const response = await fetch(`/progress/${job_id}`);
-            const data = await response.json();
+        // File input handling
+        fileInput.addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                fileLabel.textContent = `📁 ${e.target.files[0].name}`;
+                fileLabel.classList.add('has-file');
+                
+                // Clear YouTube URL when file is selected
+                youtubeInput.value = '';
+            } else {
+                fileLabel.textContent = '📁 Choose video file or drag & drop here';
+                fileLabel.classList.remove('has-file');
+            }
+        });
+
+        // Prompt suggestion functionality
+        function setPrompt(promptText) {
+            document.getElementById('prompt').value = promptText;
+        }
+
+        // Form submission
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
             
-            if (data.error) {
-                statusText.textContent = `Error: ${data.error}`;
+            const formData = new FormData(this);
+            const generateBtn = document.getElementById('generateBtn');
+            const youtubeUrl = youtubeInput.value.trim();
+            const hasFile = fileInput.files.length > 0;
+            
+            // Validate input - either YouTube URL or file, but not both, and at least one
+            if (!youtubeUrl && !hasFile) {
+                showMessage('Please provide either a YouTube URL or upload a video file.', 'error');
                 return;
             }
             
-            progressBar.value = data.progress || 0;
-            statusText.textContent = data.stage || 'Processing...';
+            // Remove file from form data if YouTube URL is provided
+            if (youtubeUrl) {
+                formData.delete('video');
+            }
             
-            if (data.gifs) {
-                data.gifs.forEach(gif => {
-                    const gifName = gif.split('/').pop();
-                    resultsDiv.innerHTML += `
-                        <img src="/gif/${gifName}" class="gif-preview">
-                        <a href="/gif/${gifName}" download>Download</a>
-                    `;
+            // Disable button and show progress
+            generateBtn.disabled = true;
+            if (youtubeUrl) {
+                generateBtn.textContent = 'Processing YouTube Video...';
+            } else {
+                generateBtn.textContent = 'Processing Uploaded Video...';
+            }
+            showProgress();
+            clearResults();
+            clearMessages();
+
+            try {
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    body: formData
                 });
-                progressContainer.style.display = 'none';
-                return;
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    currentJobId = result.job_id;
+                    startPolling();
+                    if (result.source === 'youtube') {
+                        showMessage('YouTube URL processed! Extracting segments efficiently...', 'success');
+                    } else {
+                        showMessage('Upload successful! Processing started...', 'success');
+                    }
+                } else {
+                    throw new Error(result.error || 'Processing failed');
+                }
+            } catch (error) {
+                showMessage(error.message, 'error');
+                resetForm();
             }
+        });
+
+        function showProgress() {
+            document.getElementById('progressSection').style.display = 'block';
+        }
+
+        function hideProgress() {
+            document.getElementById('progressSection').style.display = 'none';
+        }
+
+        function showResults() {
+            document.getElementById('resultsSection').style.display = 'block';
+        }
+
+        function clearResults() {
+            document.getElementById('resultsSection').style.display = 'none';
+            document.getElementById('gifGrid').innerHTML = '';
+        }
+
+        function showMessage(message, type) {
+            const messageArea = document.getElementById('messageArea');
+            messageArea.innerHTML = `<div class="${type}-message">${message}</div>`;
+        }
+
+        function clearMessages() {
+            document.getElementById('messageArea').innerHTML = '';
+        }
+
+        function resetForm() {
+            const generateBtn = document.getElementById('generateBtn');
+            generateBtn.disabled = false;
+            generateBtn.textContent = '🚀 Generate GIFs';
+            hideProgress();
+        }
+
+        function startPolling() {
+            pollInterval = setInterval(checkProgress, 2000);
+        }
+
+        function stopPolling() {
+            if (pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = null;
+            }
+        }
+
+        async function checkProgress() {
+            if (!currentJobId) return;
+
+            try {
+                const response = await fetch(`/progress/${currentJobId}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    showMessage(data.error, 'error');
+                    stopPolling();
+                    resetForm();
+                    return;
+                }
+
+                // Update progress bar
+                const progressFill = document.getElementById('progressFill');
+                const progressText = document.getElementById('progressText');
+                const statusText = document.getElementById('statusText');
+
+                progressFill.style.width = `${data.progress || 0}%`;
+                
+                // Update status text
+                const stageMessages = {
+                    'extracting_info': 'Extracting video info...',
+                    'downloading_for_transcription': 'Getting transcript...',
+                    'analyzing_transcript': 'Analyzing transcript...',
+                    'loading_video': 'Loading video...',
+                    'transcribing': 'Transcribing audio...',
+                    'analyzing_content': 'Analyzing content with AI...',
+                    'downloading_segments': 'Downloading selected segments...',
+                    'downloading_segment_1': 'Downloading segment 1/3...',
+                    'downloading_segment_2': 'Downloading segment 2/3...',
+                    'downloading_segment_3': 'Downloading segment 3/3...',
+                    'creating_gifs': 'Creating GIFs...',
+                    'complete': 'Complete!'
+                };
+
+                if (data.stage) {
+                    progressText.textContent = stageMessages[data.stage] || 'Processing...';
+                    statusText.textContent = `${Math.round(data.progress || 0)}%`;
+                }
+
+                // Handle completion
+                if (data.stage === 'complete' && data.gifs) {
+                    stopPolling();
+                    resetForm();
+                    displayResults(data.gifs);
+                    showMessage(`Successfully generated ${data.total_gifs} GIF(s)!${data.video_title ? ` From: "${data.video_title}"` : ''}`, 'success');
+                }
+            } catch (error) {
+                console.error('Error checking progress:', error);
+                showMessage('Error checking progress. Please try again.', 'error');
+                stopPolling();
+                resetForm();
+            }
+        }
+
+        function displayResults(gifs) {
+            const gifGrid = document.getElementById('gifGrid');
+            gifGrid.innerHTML = '';
+
+            gifs.forEach((gif, index) => {
+                const gifItem = document.createElement('div');
+                gifItem.className = 'gif-item';
+                
+                gifItem.innerHTML = `
+                    <img src="/download/${gif.filename}" alt="Generated GIF ${index + 1}">
+                    <div class="gif-info">
+                        <div class="gif-text">"${gif.text}"</div>
+                        <small>Duration: ${gif.duration}</small>
+                    </div>
+                    <button class="download-btn" onclick="downloadGif('${gif.filename}')">
+                        📥 Download
+                    </button>
+                `;
+                
+                gifGrid.appendChild(gifItem);
+            });
+
+            showResults();
+        }
+
+        function downloadGif(filename) {
+            const link = document.createElement('a');
+            link.href = `/download/${filename}`;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Drag and drop functionality (only when not disabled)
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            fileLabel.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            fileLabel.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            fileLabel.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight(e) {
+            if (!fileInput.disabled) {
+                fileLabel.style.borderColor = '#667eea';
+                fileLabel.style.background = '#f0f2ff';
+            }
+        }
+
+        function unhighlight(e) {
+            if (!fileInput.disabled) {
+                fileLabel.style.borderColor = '#dee2e6';
+                fileLabel.style.background = '#f8f9fa';
+            }
+        }
+
+        fileLabel.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            if (fileInput.disabled) return;
             
-            setTimeout(() => checkProgress(job_id), 1000);
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            
+            if (files.length > 0) {
+                fileInput.files = files;
+                fileInput.dispatchEvent(new Event('change'));
+            }
         }
     </script>
 </body>

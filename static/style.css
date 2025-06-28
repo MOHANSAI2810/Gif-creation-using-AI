@@ -1,19 +1,24 @@
 body {
-  font-family: sans-serif;
-  padding: 40px;
+  font-family: Arial;
+  padding: 20px;
   background: #f4f4f4;
 }
-
-.container {
-  background: white;
+form {
+  background: #fff;
   padding: 20px;
   border-radius: 8px;
-  max-width: 500px;
-  margin: auto;
+  box-shadow: 0 0 6px #aaa;
+  margin-bottom: 20px;
 }
-
-input, button {
-  margin: 10px 0;
-  width: 100%;
-  padding: 10px;
+button {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+img {
+  border: 1px solid #ccc;
+  border-radius: 4px;
 }
