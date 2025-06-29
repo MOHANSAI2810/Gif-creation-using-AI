@@ -1,0 +1,8 @@
+Flask
+Flask-Cors
+whisper
+openai
+moviepy
+yt-dlp
+google-generativeai
+gunicorn
