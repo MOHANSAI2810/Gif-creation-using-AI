@@ -497,10 +497,7 @@ def process_video_to_gifs(video_path, prompt, job_id):
             
     except Exception as e:
         progress[job_id] = {'error': f'Processing failed: {str(e)}'}
-    finally:
-        # Cleanup uploaded file
-        if os.path.exists(video_path):
-            os.remove(video_path)
+
 
 @app.route('/')
 def index():
